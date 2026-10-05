@@ -1,0 +1,8 @@
+# gradlew 是 shell 脚本，必须保持 LF 换行。
+# Windows 上 Git 默认会转成 CRLF，导致 Linux 上执行报
+# "bad interpreter: /usr/bin/env bash^M" 这类错误。
+gradlew text eol=lf
+*.sh text eol=lf
+
+# 网页资源与模型分片按二进制处理，避免任何换行转换损坏内容
+app/src/main/assets/www/* binary
