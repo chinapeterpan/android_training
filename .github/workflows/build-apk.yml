@@ -1,6 +1,5 @@
 name: 构建 APK
 
-# 触发时机：手动触发，或往 main 分支推送时自动构建
 on:
   workflow_dispatch:
   push:
@@ -14,12 +13,11 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
-      # Windows 提交时不保留可执行位，Linux 上会报
-      # "./gradlew: Permission denied"（退出码 126）。这里强制加上。
-      - name: 赋予 gradlew 执行权限
-        run: |
-          chmod +x ./gradlew
-          ls -l ./gradlew
+      # GitHub 官方给出的解决方案：
+      # Windows 提交时不会保留可执行位，Linux runner 按 Git 记录的模式执行，
+      # 因此必须在运行前手动赋予权限。
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
 
       - name: 设置 JDK 17
         uses: actions/setup-java@v4
@@ -27,7 +25,6 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # 缓存 Gradle 与依赖，第二次构建会快很多
       - name: 缓存 Gradle
         uses: actions/cache@v4
         with:
@@ -38,36 +35,9 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
-      # 环境自检：把关键状态打出来，失败时能一眼看出问题
-      - name: 环境自检
-        run: |
-          echo "--- Java ---"
-          java -version 2>&1
-          echo "--- JAVA_HOME: ${JAVA_HOME:-未设置} ---"
-          echo "--- ANDROID_HOME: ${ANDROID_HOME:-未设置} ---"
-          echo "--- gradlew 权限 ---"
-          ls -l ./gradlew
-          echo "--- 工程文件 ---"
-          ls -la ./build.gradle ./settings.gradle ./init.gradle
-          echo "--- assets 体积 ---"
-          du -sh app/src/main/assets/www/ 2>/dev/null || echo "assets 缺失"
-          ls app/src/main/assets/www/ | head -5
-
-      # 关键：用 --init-script 引用工程内的 init.gradle 走国内镜像。
-      # 之前把 Gradle 脚本写在 YAML 的 heredoc 里，缩进会被破坏导致语法错误，
-      # 所以改成独立文件。
+      # 国内镜像已在 settings.gradle 配好，无需额外的 init script
       - name: 构建 debug APK
-        run: |
-          set -o pipefail
-          bash ./gradlew assembleDebug --no-daemon --init-script ./init.gradle 2>&1 | tee build.log
-          # 失败时把关键片段摘出来，便于定位
-          if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            echo "===== 构建失败，关键日志 ====="
-            grep -iE "error|exception|failed|what went wrong|caused by|not found|could not" build.log | head -40 || true
-            echo "===== 最后 30 行 ====="
-            tail -30 build.log
-            exit 1
-          fi
+        run: ./gradlew assembleDebug --no-daemon
 
       - name: 上传 APK
         uses: actions/upload-artifact@v4
