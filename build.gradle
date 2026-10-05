@@ -1,0 +1,9 @@
+// 顶层构建脚本
+// 使用 AGP 8.5.2 + JDK 17，这是目前兼容性最好的一组
+plugins {
+    id 'com.android.application' version '8.5.2' apply false
+}
+
+tasks.register('clean', Delete) {
+    delete rootProject.layout.buildDirectory
+}

@@ -1,0 +1,51 @@
+{
+  "totalSize": 43846481,
+  "partSize": 4194304,
+  "count": 11,
+  "parts": [
+    {
+      "file": "model.bin.part0",
+      "size": 4194304
+    },
+    {
+      "file": "model.bin.part1",
+      "size": 4194304
+    },
+    {
+      "file": "model.bin.part2",
+      "size": 4194304
+    },
+    {
+      "file": "model.bin.part3",
+      "size": 4194304
+    },
+    {
+      "file": "model.bin.part4",
+      "size": 4194304
+    },
+    {
+      "file": "model.bin.part5",
+      "size": 4194304
+    },
+    {
+      "file": "model.bin.part6",
+      "size": 4194304
+    },
+    {
+      "file": "model.bin.part7",
+      "size": 4194304
+    },
+    {
+      "file": "model.bin.part8",
+      "size": 4194304
+    },
+    {
+      "file": "model.bin.part9",
+      "size": 4194304
+    },
+    {
+      "file": "model.bin.part10",
+      "size": 1903441
+    }
+  ]
+}
