@@ -57,16 +57,26 @@ jobs:
       - name: 授予 Gradle 执行权限
         run: chmod +x ./gradlew
 
-      # 失败时把关键日志打出来，避免只看到 exit code 猜原因
+      # 失败时把关键日志写到 Actions 页面顶部，
+      # 避免只能靠管理员权限下载完整日志才能定位问题。
       - name: 构建 debug APK
         run: |
           set -o pipefail
           ./gradlew assembleDebug --no-daemon 2>&1 | tee build.log
           if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            echo "================ 构建失败，错误摘要 ================"
-            grep -iE "what went wrong|error:|exception|caused by|failed|could not|not found" build.log | head -30 || true
-            echo "================ 日志末尾 ================"
-            tail -40 build.log
+            {
+              echo "## 构建失败摘要"
+              echo ""
+              echo "### 错误行"
+              echo '```'
+              grep -iE "what went wrong|error:|exception|caused by|failed|could not|not found|unresolved" build.log | head -30 || echo "(未匹配到错误行)"
+              echo '```'
+              echo ""
+              echo "### 日志末尾"
+              echo '```'
+              tail -40 build.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 
