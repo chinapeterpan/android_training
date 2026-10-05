@@ -80,7 +80,49 @@ jobs:
             exit 1
           fi
 
+      # 无论成败都收集环境与配置信息，方便排查
+      - name: 收集诊断信息
+        if: always()
+        run: |
+          mkdir -p diag
+          {
+            echo "===== Java ====="
+            java -version 2>&1
+            echo "===== gradlew 权限 ====="
+            ls -l ./gradlew
+            echo "===== 关键文件 ====="
+            ls -la build.gradle settings.gradle gradle.properties \
+                    app/build.gradle app/src/main/AndroidManifest.xml 2>&1
+            echo "===== 图标 PNG 校验 ====="
+            for f in app/src/main/res/mipmap-*/ic_launcher.png; do
+              echo "$f : $(stat -c%s "$f") bytes"
+            done
+            echo "===== assets 清单 ====="
+            ls -la app/src/main/assets/www/ 2>&1 | head -30
+            echo "===== assets 总体积 ====="
+            du -sh app/src/main/assets/www/ 2>&1
+            echo "===== Gradle 包装器 ====="
+            ls -la gradle/wrapper/
+            cat gradle/wrapper/gradle-wrapper.properties
+            echo "===== build.log 末尾 ====="
+            tail -60 build.log 2>/dev/null || echo "(无build.log)"
+          } > diag/info.txt 2>&1
+          cat diag/info.txt
+
+      # 无论成败都上传诊断包：下载它不需要仓库管理员权限
+      - name: 上传诊断日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-diagnostics
+          path: |
+            diag/
+            build.log
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: 上传 APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: count-to-10-apk
