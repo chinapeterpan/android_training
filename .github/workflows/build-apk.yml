@@ -1,6 +1,6 @@
 name: 构建 APK
 
-# 触发时机：手动触发，或往main 分支推送时自动构建
+# 触发时机：手动触发，或往 main 分支推送时自动构建
 on:
   workflow_dispatch:
   push:
@@ -14,7 +14,7 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
-      # 关键：Windows 上提交的脚本不带可执行位，Linux 上会报
+      # Windows 提交时不保留可执行位，Linux 上会报
       # "./gradlew: Permission denied"（退出码 126）。这里强制加上。
       - name: 赋予 gradlew 执行权限
         run: |
@@ -38,48 +38,36 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
-      - name: 设置 Gradle 镜像加速
+      # 环境自检：把关键状态打出来，失败时能一眼看出问题
+      - name: 环境自检
         run: |
-          mkdir -p ~/.gradle
-          cat > ~/.gradle/init.gradle <<'EOF'
-          allprojects {
-              repositories {
-                  maven { url 'https://maven.aliyun.com/repository/google' }
-                  maven { url 'https://maven.aliyun.com/repository/public' }
-                  google()
-                  mavenCentral()
-              }
-          }
-          settingsEvaluated { settings ->
-              settings.pluginManagement {
-                  repositories {
-                      maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
-                      maven { url 'https://maven.aliyun.com/repository/google' }
-                      maven { url 'https://maven.aliyun.com/repository/public' }
-                      gradlePluginPortal()
-                      google()
-                  }
-              }
-          }
-          EOF
+          echo "--- Java ---"
+          java -version 2>&1
+          echo "--- JAVA_HOME: ${JAVA_HOME:-未设置} ---"
+          echo "--- ANDROID_HOME: ${ANDROID_HOME:-未设置} ---"
+          echo "--- gradlew 权限 ---"
+          ls -l ./gradlew
+          echo "--- 工程文件 ---"
+          ls -la ./build.gradle ./settings.gradle ./init.gradle
+          echo "--- assets 体积 ---"
+          du -sh app/src/main/assets/www/ 2>/dev/null || echo "assets 缺失"
+          ls app/src/main/assets/www/ | head -5
 
-      # 用 bash 显式解释执行，不依赖文件自身的可执行位
+      # 关键：用 --init-script 引用工程内的 init.gradle 走国内镜像。
+      # 之前把 Gradle 脚本写在 YAML 的 heredoc 里，缩进会被破坏导致语法错误，
+      # 所以改成独立文件。
       - name: 构建 debug APK
         run: |
-          set -e
-          bash ./gradlew assembleDebug --no-daemon --stacktrace \
-            || {
-              echo "===== 构建失败，以下是详细日志 ====="
-              ls -la ./gradlew || true
-              ls -la gradle/wrapper/ || true
-              echo "--- Java 版本 ---"
-              java -version
-              echo "--- ANDROID_HOME ---"
-              echo "${ANDROID_HOME:-未设置}"
-              echo "--- assets 目录 ---"
-              ls -la app/src/main/assets/www/ | head -30
-              exit 1
-            }
+          set -o pipefail
+          bash ./gradlew assembleDebug --no-daemon --init-script ./init.gradle 2>&1 | tee build.log
+          # 失败时把关键片段摘出来，便于定位
+          if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            echo "===== 构建失败，关键日志 ====="
+            grep -iE "error|exception|failed|what went wrong|caused by|not found|could not" build.log | head -40 || true
+            echo "===== 最后 30 行 ====="
+            tail -30 build.log
+            exit 1
+          fi
 
       - name: 上传 APK
         uses: actions/upload-artifact@v4
