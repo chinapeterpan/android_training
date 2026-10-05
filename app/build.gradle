@@ -15,9 +15,11 @@ android {
         versionName "1.0"
     }
 
-    // assets 里的模型分片已经压缩过，不要再压一遍，否则构建很慢
+    // 模型分片已压缩过（.gz 内容），不能再压一遍，否则构建极慢甚至失败。
+    // 注意：文件实际是 model.bin.part0 这种命名，aapt 的 noCompress 只按
+    // 完整扩展名匹配，所以必须写 'part'，写 'bin' 不生效。
     aaptOptions {
-        noCompress 'bin'
+        noCompress 'part'
     }
 
     buildTypes {
