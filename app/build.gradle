@@ -15,11 +15,11 @@ android {
         versionName "1.0"
     }
 
-    // 模型分片已压缩过（.gz 内容），不能再压一遍，否则构建极慢甚至失败。
-    // 注意：文件实际是 model.bin.part0 这种命名，aapt 的 noCompress 只按
-    // 完整扩展名匹配，所以必须写 'part'，写 'bin' 不生效。
-    aaptOptions {
-        noCompress 'part'
+    // AGP 8.x 已移除旧的 aaptOptions { noCompress }，改用 androidResources。
+    // 模型分片（model.bin.part0）内容已是 gzip 压缩过的，
+    // 若被 aapt 再压一次会极慢且无意义，因此排除压缩。
+    androidResources {
+        noCompress += 'part'
     }
 
     buildTypes {
@@ -36,13 +36,6 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
-    }
-
-    packagingOptions {
-        // 模型分片较大，交给系统按需处理
-        jniLibs {
-            useLegacyPackaging false
-        }
     }
 }
 
