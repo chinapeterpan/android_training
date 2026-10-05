@@ -57,28 +57,27 @@ jobs:
       - name: 授予 Gradle 执行权限
         run: chmod +x ./gradlew
 
-      # 失败时把关键日志写到 Actions 页面顶部，
-      # 避免只能靠管理员权限下载完整日志才能定位问题。
+      # 用 continue-on-error 让构建失败不中断流程，
+      # 这样后面的诊断步骤一定会执行，错误信息也一定会出现在运行日志里。
       - name: 构建 debug APK
+        continue-on-error: true
         run: |
-          set -o pipefail
           ./gradlew assembleDebug --no-daemon 2>&1 | tee build.log
-          if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            {
-              echo "## 构建失败摘要"
-              echo ""
-              echo "### 错误行"
-              echo '```'
-              grep -iE "what went wrong|error:|exception|caused by|failed|could not|not found|unresolved" build.log | head -30 || echo "(未匹配到错误行)"
-              echo '```'
-              echo ""
-              echo "### 日志末尾"
-              echo '```'
-              tail -40 build.log
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
+          echo "BUILD_EXIT_CODE=${PIPESTATUS[0]}" >> "$GITHUB_ENV"
+
+      # 把错误原样打到运行日志，页面直接可见，不需要下载任何文件
+      - name: 显示构建错误
+        if: failure()
+        run: |
+          echo "::group::构建失败，以下是完整错误日志"
+          cat build.log || echo "(无 build.log)"
+          echo "::endgroup::"
+          {
+            echo "## 构建失败"
+            echo '```'
+            grep -iE "what went wrong|error:|exception|caused by|failed|could not|not found|unresolved|A problem occurred" build.log | head -30 || echo "(未匹配到错误行)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # 无论成败都收集环境与配置信息，方便排查
       - name: 收集诊断信息
@@ -122,7 +121,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: 上传 APK
-        if: success()
+        if: success() && hashFiles('app/build/outputs/apk/debug/app-debug.apk') != ''
         uses: actions/upload-artifact@v4
         with:
           name: count-to-10-apk
