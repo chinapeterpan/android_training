@@ -62,8 +62,19 @@ jobs:
       - name: 构建 debug APK
         continue-on-error: true
         run: |
+          set -o pipefail
           ./gradlew assembleDebug --no-daemon 2>&1 | tee build.log
-          echo "BUILD_EXIT_CODE=${PIPESTATUS[0]}" >> "$GITHUB_ENV"
+          code=${PIPESTATUS[0]}
+          echo ">>> Gradle 退出码: $code"
+          if [ "$code" -ne 0 ]; then
+            echo ">>> 构建失败，关键错误："
+            grep -iE "what went wrong|error:|exception|caused by|failed|could not|A problem occurred|BUILD FAILED" build.log | head -25 || true
+            echo ">>> 日志末尾："
+            tail -30 build.log
+          else
+            echo ">>> 构建成功，输出文件："
+            find . -name "*.apk" -not -path "./.git/*" 2>/dev/null || true
+          fi
 
       # 把错误原样打到运行日志，页面直接可见，不需要下载任何文件
       - name: 显示构建错误
@@ -114,16 +125,20 @@ jobs:
         if: always()
         run: |
           mkdir -p apk-out
-          echo "===== 查找 APK ====="
-          find app/build/outputs -name "*.apk" 2>/dev/null | tee apk-list.txt || true
-          APK=$(find app/build/outputs -name "*.apk" 2>/dev/null | head -1)
+          echo "===== app/build 目录结构 ====="
+          ls -la app/build/ 2>&1 || echo "(无 app/build)"
+          echo "===== outputs 目录 ====="
+          ls -laR app/build/outputs/ 2>&1 | head -50 || echo "(无 outputs 目录)"
+          echo "===== 全局查找 apk ====="
+          find . -name "*.apk" -not -path "./.git/*" 2>/dev/null | head -20 | tee apk-list.txt
+          APK=$(find . -name "*.apk" -not -path "./.git/*" 2>/dev/null | head -1)
           if [ -n "$APK" ]; then
             cp "$APK" apk-out/app-debug.apk
             echo "已找到并复制: $APK"
             ls -la apk-out/
           else
-            echo "未找到 APK，构建可能未产出安装包"
-            ls -laR app/build/outputs 2>/dev/null | head -40 || echo "(无 outputs 目录)"
+            echo ">>> 未找到任何 APK"
+            echo ">>> 检查 assembleDebug 是否真的产出了安装包"
           fi
 
       # 无论成败都上传诊断包：下载它不需要仓库管理员权限
