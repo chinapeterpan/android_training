@@ -132,21 +132,26 @@ jobs:
           if [ -n "$APK" ]; then
             cp "$APK" apk-out/app-debug.apk
             SIZE=$(du -h apk-out/app-debug.apk | cut -f1)
-            echo "APK_SIZE=$SIZE" >> "$GITHUB_ENV"
+            {
+              echo "### ✅ 构建成功"
+              echo ""
+              echo "APK 大小：**$SIZE**"
+              echo ""
+              echo "在本次运行的 Artifacts 区域下载 \`count-to-10-apk\`。"
+            } >> "$GITHUB_STEP_SUMMARY"
             echo "✅ 找到 APK: $APK（$SIZE）"
-            echo "### ✅ 构建成功，APK 大小 $SIZE" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "APK_SIZE=none" >> "$GITHUB_ENV"
             echo "❌ 未产出 APK"
-            echo "### ❌ 未产出 APK" >> "$GITHUB_STEP_SUMMARY"
-            echo "### Gradle 日志末尾" >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-            tail -30 build.log 2>/dev/null >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            {
+              echo "### ❌ 未产出 APK"
+              echo ""
+              echo '```'
+              grep -iE "error:|What went wrong|FAILED|Exception" build.log 2>/dev/null | head -20 || tail -25 build.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      # 把构建结果 commit 回仓库，这样无需下载任何文件，
-      # 直接访问仓库就能看到 gradle 到底报了什么。
+      # 把构建结果 commit 回仓库（只提交小结，不含大文件）
       - name: 提交构建报告
         if: always()
         run: |
@@ -157,38 +162,30 @@ jobs:
             echo "提交: \`${GITHUB_SHA}\`"
             echo "时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
             echo ""
-            echo "## 结果"
             if [ -f apk-out/app-debug.apk ]; then
+              echo "## 结果"
+              echo ""
               echo "✅ 成功产出 APK（$(du -h apk-out/app-debug.apk | cut -f1)）"
             else
+              echo "## 结果"
+              echo ""
               echo "❌ 未产出 APK"
             fi
             echo ""
-            echo "## Gradle 日志（末尾 80 行）"
+            echo "## 关键日志"
             echo '```'
-            tail -80 build.log 2>/dev/null || echo "(无 build.log)"
-            echo '```'
-            echo ""
-            echo "## 环境"
-            echo '```'
-            java -version 2>&1
-            echo "--- gradlew ---"
-            ls -l ./gradlew
-            echo "--- AndroidManifest ---"
-            ls -la app/src/main/AndroidManifest.xml
-            echo "--- 图标 ---"
-            ls -la app/src/main/res/mipmap-*/ic_launcher.png
-            echo "--- assets ---"
-            ls -la app/src/main/assets/www/ | head -25
+            grep -iE "error:|What went wrong|FAILED|Exception|BUILD SUCCESS" build.log 2>/dev/null | head -20 || tail -25 build.log
             echo '```'
           } > report/BUILD_REPORT.md
           cat report/BUILD_REPORT.md
-          # 只提交报告文件，不动其他内容
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add report/BUILD_REPORT.md
-          git commit -m "chore: 更新构建报告 ${GITHUB_SHA:0:7}" || echo "(无变更可提交)"
-          git push || echo "(推送失败，可能是权限不足)"
+          if git diff --cached --quiet; then
+            echo "(报告无变化)"
+            exit 0
+          fi
+          git commit -m "chore: 构建报告 ${GITHUB_SHA:0:7}"
 
       - name: 上传 APK
         if: always()
