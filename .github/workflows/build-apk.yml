@@ -9,6 +9,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    permissions:
+      # 允许把构建报告 commit 回仓库，便于排查
+      contents: write
+
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -141,18 +145,50 @@ jobs:
             echo '```' >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      # 无论成败都上传诊断包：下载它不需要仓库管理员权限
-      - name: 上传诊断日志
+      # 把构建结果 commit 回仓库，这样无需下载任何文件，
+      # 直接访问仓库就能看到 gradle 到底报了什么。
+      - name: 提交构建报告
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-diagnostics
-          path: |
-            diag/
-            build.log
-            apk-list.txt
-          retention-days: 7
-          if-no-files-found: ignore
+        run: |
+          mkdir -p report
+          {
+            echo "# 构建报告"
+            echo ""
+            echo "提交: \`${GITHUB_SHA}\`"
+            echo "时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo ""
+            echo "## 结果"
+            if [ -f apk-out/app-debug.apk ]; then
+              echo "✅ 成功产出 APK（$(du -h apk-out/app-debug.apk | cut -f1)）"
+            else
+              echo "❌ 未产出 APK"
+            fi
+            echo ""
+            echo "## Gradle 日志（末尾 80 行）"
+            echo '```'
+            tail -80 build.log 2>/dev/null || echo "(无 build.log)"
+            echo '```'
+            echo ""
+            echo "## 环境"
+            echo '```'
+            java -version 2>&1
+            echo "--- gradlew ---"
+            ls -l ./gradlew
+            echo "--- AndroidManifest ---"
+            ls -la app/src/main/AndroidManifest.xml
+            echo "--- 图标 ---"
+            ls -la app/src/main/res/mipmap-*/ic_launcher.png
+            echo "--- assets ---"
+            ls -la app/src/main/assets/www/ | head -25
+            echo '```'
+          } > report/BUILD_REPORT.md
+          cat report/BUILD_REPORT.md
+          # 只提交报告文件，不动其他内容
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add report/BUILD_REPORT.md
+          git commit -m "chore: 更新构建报告 ${GITHUB_SHA:0:7}" || echo "(无变更可提交)"
+          git push || echo "(推送失败，可能是权限不足)"
 
       - name: 上传 APK
         if: always()
