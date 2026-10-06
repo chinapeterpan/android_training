@@ -108,6 +108,24 @@ jobs:
           } > diag/info.txt 2>&1
           cat diag/info.txt
 
+      # 找出 APK 实际路径并放进 apk-out/，
+      # 避免因路径不对导致上传步骤静默跳过
+      - name: 定位 APK
+        if: always()
+        run: |
+          mkdir -p apk-out
+          echo "===== 查找 APK ====="
+          find app/build/outputs -name "*.apk" 2>/dev/null | tee apk-list.txt || true
+          APK=$(find app/build/outputs -name "*.apk" 2>/dev/null | head -1)
+          if [ -n "$APK" ]; then
+            cp "$APK" apk-out/app-debug.apk
+            echo "已找到并复制: $APK"
+            ls -la apk-out/
+          else
+            echo "未找到 APK，构建可能未产出安装包"
+            ls -laR app/build/outputs 2>/dev/null | head -40 || echo "(无 outputs 目录)"
+          fi
+
       # 无论成败都上传诊断包：下载它不需要仓库管理员权限
       - name: 上传诊断日志
         if: always()
@@ -117,13 +135,15 @@ jobs:
           path: |
             diag/
             build.log
+            apk-list.txt
           retention-days: 7
           if-no-files-found: ignore
 
       - name: 上传 APK
-        if: success() && hashFiles('app/build/outputs/apk/debug/app-debug.apk') != ''
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: count-to-10-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: apk-out/app-debug.apk
           retention-days: 90
+          if-no-files-found: warn
