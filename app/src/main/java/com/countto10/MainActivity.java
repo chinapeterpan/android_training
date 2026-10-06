@@ -2,10 +2,10 @@ package com.countto10;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.webkit.WebChromeClient;
+import android.webkit.PermissionRequest;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -122,7 +122,7 @@ public class MainActivity extends AppCompatActivity {
         // 页面里的 getUserMedia 依赖这个回调才能拿到流。
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
-            public void onPermissionRequest(@NonNull com.android.webkit.PermissionRequest request) {
+            public void onPermissionRequest(@NonNull PermissionRequest request) {
                 runOnUiThread(() -> {
                     if (hasMicPermission()) {
                         request.grant(request.getResources());
