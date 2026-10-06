@@ -1,23 +1,56 @@
-# 构建报告
 
-- 提交: `7664896c770df633f022425333c861b4dd2a4851`
-- 时间: 2026-10-06 00:38:07 UTC
+Welcome to Gradle 8.7!
 
-## 结果
+Here are the highlights of this release:
+ - Compiling and testing with Java 22
+ - Cacheable Groovy script compilation
+ - New methods in lazy collection properties
 
-❌ 未产出 APK
+For more details see https://docs.gradle.org/8.7/release-notes.html
 
-## 关键日志
-```
-> Task :app:checkDebugDuplicateClasses FAILED
-FAILURE: Build failed with an exception.
-* What went wrong:
-Execution failed for task ':app:checkDebugDuplicateClasses'.
-BUILD FAILED in 31s
-```
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.7/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+Build was configured to prefer settings repositories over project repositories but repository 'maven' was added by initialization script '/home/runner/.gradle/init.gradle'
+Build was configured to prefer settings repositories over project repositories but repository 'maven2' was added by initialization script '/home/runner/.gradle/init.gradle'
+Build was configured to prefer settings repositories over project repositories but repository 'Google' was added by initialization script '/home/runner/.gradle/init.gradle'
+Build was configured to prefer settings repositories over project repositories but repository 'MavenRepo' was added by initialization script '/home/runner/.gradle/init.gradle'
+Build was configured to prefer settings repositories over project repositories but repository 'maven' was added by initialization script '/home/runner/.gradle/init.gradle'
+Build was configured to prefer settings repositories over project repositories but repository 'maven2' was added by initialization script '/home/runner/.gradle/init.gradle'
+Build was configured to prefer settings repositories over project repositories but repository 'Google' was added by initialization script '/home/runner/.gradle/init.gradle'
+Build was configured to prefer settings repositories over project repositories but repository 'MavenRepo' was added by initialization script '/home/runner/.gradle/init.gradle'
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:javaPreCompileDebug FROM-CACHE
+> Task :app:generateDebugResValues FROM-CACHE
+> Task :app:checkDebugAarMetadata
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources FROM-CACHE
+> Task :app:mergeDebugResources FROM-CACHE
+> Task :app:packageDebugResources FROM-CACHE
+> Task :app:parseDebugLocalResources FROM-CACHE
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug FROM-CACHE
+> Task :app:processDebugMainManifest FROM-CACHE
+> Task :app:processDebugManifest FROM-CACHE
+> Task :app:processDebugManifestForPackage FROM-CACHE
+> Task :app:processDebugResources FROM-CACHE
 
-## 日志末尾
-```
+> Task :app:compileDebugJavaWithJavac
+Note: /home/runner/work/android_training/android_training/app/src/main/java/com/countto10/MainActivity.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+
+> Task :app:mergeDebugShaders
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets
+> Task :app:compressDebugAssets FROM-CACHE
+> Task :app:desugarDebugFileDependencies FROM-CACHE
+> Task :app:dexBuilderDebug
+> Task :app:processDebugJavaRes NO-SOURCE
+> Task :app:mergeDebugGlobalSynthetics
+> Task :app:mergeDebugStartupProfile
+> Task :app:mergeDebugJniLibFolders
 > Task :app:checkDebugDuplicateClasses FAILED
 > Task :app:mergeDebugNativeLibs NO-SOURCE
 > Task :app:mergeDebugJavaResource
@@ -58,4 +91,3 @@ Execution failed for task ':app:checkDebugDuplicateClasses'.
 
 BUILD FAILED in 31s
 25 actionable tasks: 12 executed, 13 from cache
-```
