@@ -151,41 +151,47 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      # 把构建结果 commit 回仓库（只提交小结，不含大文件）
+      # 把完整构建日志写进仓库文件，供排查
       - name: 提交构建报告
         if: always()
         run: |
           mkdir -p report
+          # 完整日志不过滤，原样保存，确保能看到真正的错误
+          cp build.log report/build-full.log 2>/dev/null || echo "(无build.log)" > report/build-full.log
           {
             echo "# 构建报告"
             echo ""
-            echo "提交: \`${GITHUB_SHA}\`"
-            echo "时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo "- 提交: \`${GITHUB_SHA}\`"
+            echo "- 时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo ""
+            echo "## 结果"
             echo ""
             if [ -f apk-out/app-debug.apk ]; then
-              echo "## 结果"
-              echo ""
               echo "✅ 成功产出 APK（$(du -h apk-out/app-debug.apk | cut -f1)）"
             else
-              echo "## 结果"
-              echo ""
               echo "❌ 未产出 APK"
             fi
             echo ""
             echo "## 关键日志"
             echo '```'
-            grep -iE "error:|What went wrong|FAILED|Exception|BUILD SUCCESS" build.log 2>/dev/null | head -20 || tail -25 build.log
+            grep -iE "error:|What went wrong|FAILED|Exception|BUILD SUCCESS|BUILD FAILED" report/build-full.log | head -25
+            echo '```'
+            echo ""
+            echo "## 日志末尾"
+            echo '```'
+            tail -40 report/build-full.log
             echo '```'
           } > report/BUILD_REPORT.md
           cat report/BUILD_REPORT.md
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add report/BUILD_REPORT.md
+          git add report/
           if git diff --cached --quiet; then
             echo "(报告无变化)"
-            exit 0
+          else
+            git commit -m "chore: 构建报告 ${GITHUB_SHA:0:7}"
+            git push --force-with-lease origin HEAD:main || git push origin HEAD:main || echo "(push 失败)"
           fi
-          git commit -m "chore: 构建报告 ${GITHUB_SHA:0:7}"
 
       - name: 上传 APK
         if: always()
